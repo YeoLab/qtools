@@ -25,14 +25,13 @@ To install this code, clone this github repository and use `pip` to install
 Here's an example of a single job where I want to use `hmmscan` to find domains in protein sequences, specifying the walltime and number of processors.
 
 ```
-from gscripts.qtools import Submitter
+import qtools
 
 n_processors = 16
 pfam_a = '/projects/ps-yeolab/genomes/pfam/release_27/ftp.sanger.ac.uk/pub/databases/Pfam/releases/Pfam27.0/Pfam-A.hmm'
-# for isoform_number in (1, 2):
-hmmscan_out = '{}/{}_hmmscan_pfamA.txt'.format(folder, prefix)
-command = 'hmmscan --domtblout {} --cpu {} --noali --notextw {} {}'.format(hmmscan_out, n_processors, pfam_a, translated_fasta)
-sub = Submitter([command], 'hmmscan', walltime='24:00:00', ppn=n_processors)
+hmmscan_out = "/projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations_hmmscan_pfamA.txt"
+command = 'hmmscan --domtblout {0} --cpu {1} --noali --notextw {2} {3}'.format(hmmscan_out, n_processors, pfam_a, translated_fasta)
+sub = qtools.Submitter([command], 'hmmscan', walltime='24:00:00', ppn=n_processors)
 ```
 
 This writes a file called `hmmmscan.sh` which looks like this:
@@ -67,7 +66,7 @@ them with one command using `array=True`. Here's an example of calculating avera
 import os
 import glob
 
-from qtools import Submitter
+import qtools
 
 folder = '/projects/ps-yeolab/obotvinnik/singlecell_pnms'
 
@@ -93,7 +92,7 @@ for bedfile in bedfiles:
     commands.append(command)
 
 jobname = 'exonbody_conservation'
-Submitter(commands, jobname, array=True, walltime='2:00:00')
+qtools.Submitter(commands, jobname, array=True, walltime='2:00:00')
 ```
 
 Output:
@@ -130,6 +129,8 @@ of to the folder you're currently in by default, then specify them with `sh`,
 `out`, and `err`. You can also specify the queue (`home-yeo` vs `home-scrm`) with `queue="home-scrm"`. The default is `home-yeo`.
 
 ```
+import qtools
+
 jobname = 'run_outrigger_py'
 sh = jobname + '.sh'
 out = sh + '.out'
@@ -137,7 +138,7 @@ err = sh + '.err'
 
 command = 'python /projects/ps-yeolab/obotvinnik/singlecell_pnms/outrigger/outrigger.py'
 
-sub = Submitter([command], 'run_outrigger_py', queue='home-yeo',
+sub = qtools.Submitter([command], 'run_outrigger_py', queue='home-yeo',
                 out=out, err=err, sh=sh, walltime='100:00:00')
 ```
 
