@@ -1,6 +1,6 @@
 # qtools
 
-[![](https://img.shields.io/travis/YeoLab/qtools.svg)](https://travis-ci.org/YeoLab/qtools)[![](https://img.shields.io/pypi/v/qtools.svg)](https://pypi.python.org/pypi/qtools)
+[![](https://img.shields.io/travis/YeoLab/qtools.svg)](https://travis-ci.org/YeoLab/qtools)
 
 ## What is `qtools`?
 
