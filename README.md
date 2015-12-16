@@ -1,13 +1,12 @@
 # qtools
 
-[![](https://img.shields.io/travis/YeoLab/qtools.svg)](https://travis-ci.org/YeoLab/qtools)
+[![Build Status](https://travis-ci.org/YeoLab/qtools.svg)](https://travis-ci.org/YeoLab/qtools)
 
 ## What is `qtools`?
 
 qtools has helper functions to submit jobs to compute clusters (PBS on TSCC, SGE on oolite) from within Python
 
 * Free software: BSD license
-* Documentation: https://YeoLab.github.io/qtools
 
 ## Installation
 
