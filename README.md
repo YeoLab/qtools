@@ -26,29 +26,35 @@ Here's an example of a single job where I want to use `hmmscan` to find domains 
 ```
 import qtools
 
-n_processors = 16
-pfam_a = '/projects/ps-yeolab/genomes/pfam/release_27/ftp.sanger.ac.uk/pub/databases/Pfam/releases/Pfam27.0/Pfam-A.hmm'
-hmmscan_out = "/projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations_hmmscan_pfamA.txt"
-command = 'hmmscan --domtblout {0} --cpu {1} --noali --notextw {2} {3}'.format(hmmscan_out, n_processors, pfam_a, translated_fasta)
-sub = qtools.Submitter([command], 'hmmscan', walltime='24:00:00', ppn=n_processors)
+command = 'bedtools intersect exons.bed placental_conserved_elements.bed'
+sub = qtools.Submitter(command, 'intersect')
 ```
 
-This writes a file called `hmmmscan.sh` which looks like this:
+And this will create a submitter script with the default options:
+
+* `walltime="00:30:00"`
+* `nodes=1`
+* `ppn=1` (processors per node - increase this one first, instead of the numbers of nodes. Max is 16)
+* `group="yeo-group"`
+* `queue="home-scrm"` (could also be `home-yeo`
+
+
+This writes a file called `intersect.sh` which looks like this:
 
 ```
 #!/bin/bash
-#PBS -N hmmscan
-#PBS -o /projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations_hmmscan_pfamA.txt.out
-#PBS -e /projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations_hmmscan_pfamA.txt.err
+#PBS -N intersect
+#PBS -o intersect.out
+#PBS -e intersect.err
 #PBS -V
-#PBS -l walltime=24:00:00
-#PBS -l nodes=1:ppn=16
+#PBS -l walltime=00:30:00
+#PBS -l nodes=1:ppn=1
 #PBS -A yeo-group
 #PBS -q home
 
 # Go to the directory from which the script was called
 cd $PBS_O_WORKDIR
-hmmscan --domtblout /projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations_hmmscan_pfamA.txt --cpu 16 --noali --notextw /projects/ps-yeolab/genomes/pfam/release_27/ftp.sanger.ac.uk/pub/databases/Pfam/releases/Pfam27.0/Pfam-A.hmm /projects/ps-yeolab/obotvinnik/singlecell_pnms/isoform_translations.fa
+bedtools intersect exons.bed placental_conserved_elements.bed
 ```
 
 The output is:
@@ -121,7 +127,7 @@ cmd[2]="bigWigAverageOverBed /projects/ps-yeolab/genomes/hg19/hg19_phastcons_pla
 eval ${cmd[$PBS_ARRAYID]}
 ```
 
-### Direct `stdout`/`stderr` to a specific location and specify queue
+### Direct `stdout`/`stderr` to a specific location, and specify queue or number of processors
 
 If you want your `sh`/`stdout`/`stderr` to be sent to a specific location, instead
 of to the folder you're currently in by default, then specify them with `sh`,
@@ -137,8 +143,10 @@ err = sh + '.err'
 
 command = 'python /projects/ps-yeolab/obotvinnik/singlecell_pnms/outrigger/outrigger.py'
 
+n_processors = 16
 sub = qtools.Submitter([command], 'run_outrigger_py', queue='home-yeo',
-                out=out, err=err, sh=sh, walltime='100:00:00')
+                out=out, err=err, sh=sh, walltime='100:00:00', nodes=1,
+                ppn=n_processors)
 ```
 
 Output:
