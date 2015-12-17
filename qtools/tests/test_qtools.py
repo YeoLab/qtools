@@ -8,21 +8,21 @@ test_qtools
 Tests for `qtools` module.
 """
 
-import unittest
-
-from qtools import qtools
+import pytest
 
 
-class TestQtools(unittest.TestCase):
+@pytest.fixture
+def command():
+    return 'bedtools intersect exons.bed placental_conserved_elements.bed'
 
-    def setUp(self):
-        pass
 
-    def test_something(self):
-        pass
+@pytest.fixture(params=['string', 'list'])
+def commands(request, command):
+    if request.param == 'string':
+        return command
+    elif request.param == 'list':
+        return [command]
 
-    def tearDown(self):
-        pass
+class TestSubmitter(object):
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_init(self):

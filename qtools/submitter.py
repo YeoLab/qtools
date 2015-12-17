@@ -26,6 +26,8 @@ import subprocess
 from subprocess import PIPE
 import sys
 
+import six
+
 HOSTNAME = subprocess.Popen('hostname', stdout=subprocess.PIPE).communicate()[
     0].strip()
 
@@ -112,6 +114,9 @@ class Submitter(object):
 
         self.sh_filename = job_name + '.sh' if sh is None \
             else sh
+
+        if isinstance(commands, six.string_types):
+            commands = [commands]
         self.commands = commands
         self.job_name = job_name
         self.nodes = nodes
@@ -130,8 +135,7 @@ class Submitter(object):
 
     @property
     def array(self):
-        """Default value for whether or not to set this job as an array
-        """
+        """Default value for whether or not to set this job as an array"""
         if self._array is not None:
             # self._array is the user-supplied whether or not to use the array
             return self._array
@@ -155,8 +159,7 @@ class Submitter(object):
 
     @property
     def number_jobs(self):
-        """Get the number of jobs in the array
-        """
+        """Get the number of jobs in the array"""
         if self.array:
             return len(self.commands)
         else:
