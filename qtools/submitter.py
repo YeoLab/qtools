@@ -43,7 +43,8 @@ class Submitter(object):
     def __init__(self, commands, job_name, queue_type='PBS', sh=None,
                  array=None, nodes=1, ppn=1,
                  walltime='0:30:00', queue='home', account='yeo-group',
-                 out=None, err=None, max_running=None, write_and_submit=True):
+                 out=None, err=None, max_running=None, submit=True,
+                 chunksize=None):
         """Submit a job to the compute cluster
 
         Parameters
@@ -86,6 +87,16 @@ class Submitter(object):
         max_running : int, optional
             Only applicable when array=True. Maximum number of jobs running at
             once for an array job. 20 is reasonable.
+        submit : bool, optional
+            If True (default), then write the sh file AND submit the job
+            using PBS
+        chunksize : int, optional
+            If specified, then submit serial commands in subsets in this size.
+            Useful for when you want to break up a 100+ commands that
+            individually don't take that long, so you don't want to submit
+            individual 1-min jobs because that messes up the scheduler, but
+            instead you can submit a few jobs that each have ~10 serial
+            commands that you can do in a row.
 
         Returns
         -------
@@ -129,9 +140,30 @@ class Submitter(object):
             else err
         self.account = account
         self.max_running = max_running
+        self.submit = submit
+        self.chunksize = chunksize
 
-        self.job(submit=True)
-
+        if self.chunksize is None:
+            self.job()
+        else:
+            chunks = len(self.commands) / self.chunksize
+            if len(self.commands) % self.chunksize != 0:
+                chunks += 1
+            for chunk in range(chunks):
+                start = chunk * chunksize
+                stop = (chunk + 1) * chunksize
+                subset = commands[start:stop]
+                #     six.print_(start, stop, len(subset))
+                name = '{name}{chunk}'.format(name=self.job_name, chunk=chunk)
+                sh = self.sh_filename.replace('.sh', '-{}.sh'.format(chunk))
+                out = self.out_filename.replace('.sh', '-{}.sh'.format(chunk))
+                err = self.err_filename.replace('.sh', '-{}.sh'.format(chunk))
+                Submitter(subset, name, queue_type=self.queue_type, sh=sh,
+                          array=self.array, nodes=self.nodes, ppn=self.ppn,
+                          walltime=self.walltime, queue=self.queue,
+                          account=self.account, out=out, err=err,
+                          max_running=self.max_running, submit=self.submit,
+                          chunksize=None)
 
     @property
     def array(self):
@@ -202,7 +234,7 @@ class Submitter(object):
         #for backwards compatibility
         self.job(submit=submit)
 
-    def job(self, submit=False):
+    def job(self):
         """Writes the sh file and submits the job (if submit=True)
 
         Parameters
@@ -265,15 +297,18 @@ class Submitter(object):
         else:
             for command in self.commands:
                 sh_file.write(str(command) + "\n")
-        sh_file.write('\n')
 
+        sh_file.write('\n')
         sh_file.close()
-        if submit:
+
+        sys.stderr.write('Wrote commands to {}\n.'.format(self.sh_filename))
+
+        if self.submit:
             p = subprocess.Popen(["qsub", self.sh_filename],
                                  stdout=PIPE)
             output = p.communicate()[0].strip()
             job_id = re.findall(r'\d+', output)[0]
-            sys.stderr.write("job ID: %s\n" % job_id)
+            sys.stderr.write("Submitted script to queue {}. Job ID: {}\n".format(self.queue, job_id))
 
             return job_id
         else:
