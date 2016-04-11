@@ -1,32 +1,14 @@
 #!/usr/bin/env python
 
-__author__ = 'Patrick Liu, Olga Botvinnik, Michael Lovci '
-
-# TODO: simplify Submitter()/write_sh() workflow. Right now it's confusing
-# which options go where. (talk to Patrick)
-# Also, add email option that checks for $EMAIL variable (Olga: also add this
-#  to your miso pipeline script)
-
-# To depend on a job array:
-#    Array Dependencies
-#        It  is  now possible to have a job depend on an array. These dependencies are in the form depend=arraydep:arrayid[num]. If [num] is not
-#        present, then the dependencies applies to the entire array. If [num] is present, then num means the number of jobs that must  meet  the
-#        condition for the dependency to be satisfied.
-#    afterstartarray:arrayid[count]
-#        This job may be scheduled for execution only after jobs in arrayid have started execution.
-#
-#    afterokarray:arrayid[count]
-#        This job may be scheduled for execution only after jobs in arrayid have terminated with no errors.
-
-
 from collections import defaultdict
 import re
-import math
 import subprocess
 from subprocess import PIPE
 import sys
 
 import six
+
+__author__ = 'Patrick Liu, Olga Botvinnik, Michael Lovci '
 
 HOSTNAME = subprocess.Popen('hostname', stdout=subprocess.PIPE).communicate()[
     0].strip()
@@ -112,8 +94,6 @@ class Submitter(object):
 
         self._array = array
         self._queue_type = queue_type
-        # self.array = self._array if array is None else array
-        # self.queue_type = self._queue_type if queue_type is None else queue_type
 
         if self.queue_type == 'SGE':
             self.add_resource("-l", 'bigmem')
@@ -228,12 +208,6 @@ class Submitter(object):
         """
         self.additional_resources[kw].append(value)
 
-    def write_sh(self, submit=False):
-        """This will soon be deprecated. See Submitter.job() docstring
-        """
-        #for backwards compatibility
-        self.job(submit=submit)
-
     def job(self):
         """Writes the sh file and submits the job (if submit=True)
 
@@ -255,19 +229,16 @@ class Submitter(object):
         if len(self.commands) > MAX_ARRAY_JOBS and self.array:
             commands = self.commands
             name = self.job_name
-            commands_list = [commands[i:(i + MAX_ARRAY_JOBS)]
-                             for i in xrange(0, len(commands), MAX_ARRAY_JOBS)]
+            chunks = six.moves.range(0, len(commands), MAX_ARRAY_JOBS)
+            commands_list = [commands[i:(i + MAX_ARRAY_JOBS)] for i in chunks]
             for i, commands in enumerate(commands_list):
                 job_name = '{}{}'.format(name, i + 1)
                 sh_filename = '{}{}.sh'.format(self.sh_filename.rstrip('.sh'),
                                                i + 1)
-                sub = Submitter(commands=commands, job_name=job_name,
-                                sh=sh_filename, array=True,
-                                walltime=self.walltime, ppn=self.ppn,
-                                nodes=self.nodes, queue=self.queue,
-                                queue_type=self.queue_type,
-                                write_and_submit=True)
-                # sub.write_sh(**kwargs)
+                Submitter(commands=commands, job_name=job_name, sh=sh_filename,
+                          array=True, walltime=self.walltime, ppn=self.ppn,
+                          nodes=self.nodes, queue=self.queue,
+                          queue_type=self.queue_type, write_and_submit=True)
             return
 
         # sys.stderr.write(self.sh_filename)
@@ -308,7 +279,8 @@ class Submitter(object):
                                  stdout=PIPE)
             output = p.communicate()[0].strip()
             job_id = re.findall(r'\d+', output)[0]
-            sys.stderr.write("Submitted script to queue {}. Job ID: {}\n".format(self.queue, job_id))
+            sys.stderr.write("Submitted script to queue {}."
+                             " Job ID: {}\n".format(self.queue, job_id))
 
             return job_id
         else:
@@ -356,7 +328,6 @@ class Submitter(object):
         sh_file.write("%s -S /bin/bash\n" % self.queue_param_prefix)
         sh_file.write("%s -cwd\n" % self.queue_param_prefix)
         self._write_additional_resources(sh_file)
-
 
     def _write_additional_resources(self, sh_file):
         if self.additional_resources:

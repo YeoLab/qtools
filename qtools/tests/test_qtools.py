@@ -23,6 +23,8 @@ def commands(request, command):
     elif request.param == 'list':
         return [command]
 
+
 class TestSubmitter(object):
 
     def test_init(self):
+        pass
