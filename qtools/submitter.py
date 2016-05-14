@@ -272,14 +272,14 @@ class Submitter(object):
         sh_file.write('\n')
         sh_file.close()
 
-        sys.stderr.write('Wrote commands to {}\n.'.format(self.sh_filename))
+        sys.stderr.write('Wrote commands to {}.\n'.format(self.sh_filename))
 
         if self.submit:
             p = subprocess.Popen(["qsub", self.sh_filename],
                                  stdout=PIPE)
             output = p.communicate()[0].strip()
             job_id = re.findall(r'\d+', output)[0]
-            sys.stderr.write("Submitted script to queue {}."
+            sys.stderr.write("Submitted script to queue {}.\n"
                              " Job ID: {}\n".format(self.queue, job_id))
 
             return job_id
