@@ -238,7 +238,7 @@ class Submitter(object):
                 Submitter(commands=commands, job_name=job_name, sh=sh_filename,
                           array=True, walltime=self.walltime, ppn=self.ppn,
                           nodes=self.nodes, queue=self.queue,
-                          queue_type=self.queue_type, write_and_submit=True)
+                          queue_type=self.queue_type)
             return
 
         # sys.stderr.write(self.sh_filename)
