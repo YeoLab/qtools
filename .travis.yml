@@ -10,6 +10,7 @@ before_install:
 - "./miniconda.sh -b"
 - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then export PATH=~/miniconda2/bin:$PATH;
   else export PATH=~/miniconda3/bin/:$PATH; fi
+- ulimit -s 1082768
 - conda update --yes conda
 install:
 - conda create -n testenv --yes python=$TRAVIS_PYTHON_VERSION pip
