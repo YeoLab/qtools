@@ -8,7 +8,7 @@ import sys
 
 import six
 
-__author__ = 'Patrick Liu, Olga Botvinnik, Michael Lovci '
+__author__ = 'Patrick Liu, Olga Botvinnik, Michael Lovci'
 
 HOSTNAME = subprocess.Popen('hostname', stdout=subprocess.PIPE).communicate()[
     0].strip()
