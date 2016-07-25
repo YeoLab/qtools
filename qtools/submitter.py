@@ -259,7 +259,7 @@ class Submitter(object):
             self._write_pbs(sh_file)
 
         if self.array:
-            sys.stderr.write("running %d tasks as an array-job.\n" % (len(
+            sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
                 self.commands)))
             for i, cmd in enumerate(self.commands):
                 sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
@@ -276,7 +276,7 @@ class Submitter(object):
 
         if self.submit:
             p = subprocess.Popen(["qsub", self.sh_filename],
-                                 stdout=PIPE)
+                                 stdout=PIPE, universal_newlines=True)
             output = p.communicate()[0].strip()
             job_id = re.findall(r'\d+', output)[0]
             sys.stderr.write("Submitted script to queue {}.\n"
