@@ -10,8 +10,8 @@ import six
 
 __author__ = 'Patrick Liu, Olga Botvinnik, Michael Lovci'
 
-HOSTNAME = subprocess.Popen('hostname', stdout=subprocess.PIPE).communicate()[
-    0].strip()
+HOSTNAME = subprocess.Popen('hostname', stdout=subprocess.PIPE,
+                            universal_newlines=True).communicate()[0].strip()
 
 # Maximum number of jobs in an array job
 MAX_ARRAY_JOBS = 500
