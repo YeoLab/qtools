@@ -3,7 +3,6 @@
 from collections import defaultdict
 import re
 import subprocess
-from subprocess import PIPE
 import sys
 
 import six
@@ -275,9 +274,8 @@ class Submitter(object):
         sys.stderr.write('Wrote commands to {}.\n'.format(self.sh_filename))
 
         if self.submit:
-            p = subprocess.Popen(["qsub", self.sh_filename],
-                                 stdout=PIPE, universal_newlines=True)
-            output = p.communicate()[0].strip()
+            output = subprocess.check_output(["qsub", self.sh_filename],
+                                             universal_newlines=True)
             job_id = re.findall(r'\d+', output)[0]
             sys.stderr.write("Submitted script to queue {}.\n"
                              " Job ID: {}\n".format(self.queue, job_id))
