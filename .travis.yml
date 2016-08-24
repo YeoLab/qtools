@@ -26,11 +26,10 @@ before_script:
 script:
 - make coverage
 - make lint
-after_script:
-- pip install coverage
-- coveralls
 deploy:
   provider: pypi
   on:
     tags: true
     repo: olgabot/qtools
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
