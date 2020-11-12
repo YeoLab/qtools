@@ -237,18 +237,13 @@ class Submitter(object):
                 Submitter(commands=commands, job_name=job_name, sh=sh_filename,
                           array=True, walltime=self.walltime, ppn=self.ppn,
                           nodes=self.nodes, queue=self.queue,
-                          queue_type=self.queue_type)
+                          queue_type=self.queue_type, submit=self.submit)
             return
 
         # sys.stderr.write(self.sh_filename)
         sh_file = open(self.sh_filename, 'w')
         sh_file.write("#!/bin/bash\n")
 
-        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
-        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
-                                      self.out_filename))
-        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
-                                      self.err_filename))
         sh_file.write("%s -V\n" % self.queue_param_prefix)
 
         if self.queue_type == 'SGE':
@@ -256,7 +251,13 @@ class Submitter(object):
 
         elif self.queue_type == 'PBS':
             self._write_pbs(sh_file)
-
+            
+        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
+        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
+                                      self.out_filename))
+        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
+                                      self.err_filename))
+        
         if self.array:
             sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
                 self.commands)))
@@ -297,10 +298,10 @@ class Submitter(object):
         sh_file.write("%s -A %s\n" % (self.queue_param_prefix, self.account))
         sh_file.write("%s -q %s\n" % (self.queue_param_prefix, self.queue))
 
-        # Workaround to submit to 'glean' queue and 'condo' queue
-        if (self.queue == "glean") or (self.queue == "condo"):
-            sh_file.write('%s -W group_list=condo-group\n' %
-                          self.queue_param_prefix)
+        # Workaround to submit to 'glean' queue and 'condo' queue (condo-group doesn't exist anymore)
+        # if (self.queue == "glean") or (self.queue == "condo"):
+        #     sh_file.write('%s -W group_list=condo-group\n' %
+        #                   self.queue_param_prefix)
 
         self._write_additional_resources(sh_file)
 

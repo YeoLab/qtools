@@ -23,7 +23,7 @@ test_requirements = [
 
 setup(
     name='qtools',
-    version='0.1.1',
+    version='0.1.2',
     description="qtools has helper functions to submit jobs to compute clusters (PBS, SGE) from within Python",
     long_description=readme + '\n\n' + history,
     author="Olga Botvinnik",
