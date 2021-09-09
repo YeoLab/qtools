@@ -243,7 +243,11 @@ class Submitter(object):
         # sys.stderr.write(self.sh_filename)
         sh_file = open(self.sh_filename, 'w')
         sh_file.write("#!/bin/bash\n")
-
+        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
+        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
+                                      self.out_filename))
+        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
+                                      self.err_filename))
         sh_file.write("%s -V\n" % self.queue_param_prefix)
 
         if self.queue_type == 'SGE':
@@ -252,11 +256,7 @@ class Submitter(object):
         elif self.queue_type == 'PBS':
             self._write_pbs(sh_file)
             
-        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
-        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
-                                      self.out_filename))
-        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
-                                      self.err_filename))
+        
         
         if self.array:
             sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
