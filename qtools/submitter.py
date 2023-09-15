@@ -98,8 +98,8 @@ class Submitter(object):
             self.add_resource("-l", 'bigmem')
             self.add_resource("-l", 'h_vmem=16G')
 
-        if self.queue_type == 'PBS' and ppn > 16:
-            raise ValueError('Cannot have more than 16 processors per node ('
+        if self.queue_type == 'PBS' and ppn > 64:
+            raise ValueError('Cannot have more than 64 processors per node ('
                              'ppn). Tried to provide {}'.format(ppn))
 
         self.sh_filename = job_name + '.sh' if sh is None \
@@ -178,18 +178,33 @@ class Submitter(object):
 
     @property
     def queue_param_prefix(self):
-        if self.queue_type == 'PBS':
+        if self.queue_type == 'SLURM':
+            return '#SBATCH'
+        elif self.queue_type == 'PBS':
             return '#PBS'
         elif self.queue_type == 'SGE':
             return '#$'
-
+        elif self.queue_type == 'PORTAL':
+            return '#PBS'
+    
+    @property
+    def submit_cmd(self):
+        if self.queue_type == 'SLURM':
+            return "sbatch"
+        else:
+            return "qsub"
+        
     @property
     def array_job_identifier(self):
+        if self.queue_type == 'SLURM':
+            return "$SLURM_ARRAY_JOB_ID"
         if self.queue_type == 'PBS':
             return "$PBS_ARRAYID"
         elif self.queue_type == 'SGE':
             return "$SGE_TASK_ID"
-
+        elif self.queue_type == 'PORTAL':
+            return "$PBS_ARRAYID"
+    
     def add_wait(self, wait_ID):
         """
         Add passed job ID to list of jobs for this job submission to
@@ -239,43 +254,35 @@ class Submitter(object):
                           nodes=self.nodes, queue=self.queue,
                           queue_type=self.queue_type, submit=self.submit)
             return
-
+        
         # sys.stderr.write(self.sh_filename)
-        sh_file = open(self.sh_filename, 'w')
-        sh_file.write("#!/bin/bash\n")
-        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
-        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
-                                      self.out_filename))
-        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
-                                      self.err_filename))
-        sh_file.write("%s -V\n" % self.queue_param_prefix)
-
-        if self.queue_type == 'SGE':
-            self._write_sge(sh_file)
-
-        elif self.queue_type == 'PBS':
-            self._write_pbs(sh_file)
-            
+        with open(self.sh_filename, 'w') as sh_file:
         
-        
-        if self.array:
-            sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
-                self.commands)))
-            for i, cmd in enumerate(self.commands):
-                sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
-            sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
-        #    pass
-        else:
-            for command in self.commands:
-                sh_file.write(str(command) + "\n")
+            if self.queue_type == 'SLURM':
+                self._write_slurm(sh_file)
+            elif self.queue_type == 'SGE':
+                self._write_sge(sh_file)
+            elif self.queue_type == 'PBS':
+                self._write_pbs(sh_file)
 
-        sh_file.write('\n')
-        sh_file.close()
+                
+            if self.array:
+                sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
+                    self.commands)))
+                for i, cmd in enumerate(self.commands):
+                    sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
+                sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
+            #    pass
+            else:
+                for command in self.commands:
+                    sh_file.write(str(command) + "\n")
+
+            sh_file.write('\n')
 
         sys.stderr.write('Wrote commands to {}.\n'.format(self.sh_filename))
 
         if self.submit:
-            output = subprocess.check_output(["qsub", self.sh_filename],
+            output = subprocess.check_output([self.submit_cmd, self.sh_filename],
                                              universal_newlines=True)
             job_id = re.findall(r'\d+', output)[0]
             sys.stderr.write("Submitted script to queue {}.\n"
@@ -290,6 +297,13 @@ class Submitter(object):
         """
         # queue_param_prefix = '#PBS'
         #            queue_param_prefix = '#PBS'
+        sh_file.write("#!/bin/bash\n")
+        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
+        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
+                                      self.out_filename))
+        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
+                                      self.err_filename))
+        sh_file.write("%s -V\n" % self.queue_param_prefix)
         sh_file.write("%s -l walltime=%s\n" % (self.queue_param_prefix,
                                                self.walltime))
         sh_file.write("%s -l nodes=%s:ppn=%s\n" % (self.queue_param_prefix,
@@ -324,6 +338,13 @@ class Submitter(object):
         """SGE-queue (oolit) specific header formatting
         """
         # queue_param_prefix = '#$'
+        sh_file.write("#!/bin/bash\n")
+        sh_file.write("%s -N %s\n" % (self.queue_param_prefix, self.job_name))
+        sh_file.write("%s -o %s\n" % (self.queue_param_prefix,
+                                      self.out_filename))
+        sh_file.write("%s -e %s\n" % (self.queue_param_prefix,
+                                      self.err_filename))
+        sh_file.write("%s -V\n" % self.queue_param_prefix)
         sh_file.write("%s -S /bin/bash\n" % self.queue_param_prefix)
         sh_file.write("%s -cwd\n" % self.queue_param_prefix)
         self._write_additional_resources(sh_file)
@@ -336,3 +357,45 @@ class Submitter(object):
                 for v in value:
                     sh_file.write("%s %s %s\n" % (self.queue_param_prefix,
                                                   key, v))
+
+    def _write_slurm(self, sh_file):
+        """PBS-queue (TSCC) specific header formatting
+        """
+        # queue_param_prefix = '#PBS'
+        #            queue_param_prefix = '#PBS'
+        sh_file.write("#!/bin/bash\n")
+        sh_file.write(f"{self.queue_param_prefix} -J {self.job_name}\n")
+        sh_file.write(f"{self.queue_param_prefix} -N {self.nodes}\n")
+        sh_file.write(f"{self.queue_param_prefix} --tasks-per-node {self.ppn}\n")
+        sh_file.write(f"{self.queue_param_prefix} -A {self.account}\n")
+        sh_file.write(f"{self.queue_param_prefix} -q {self.queue}\n")
+        sh_file.write(f"{self.queue_param_prefix} -t {self.walltime}\n")
+        
+        sh_file.write(f"{self.queue_param_prefix} --export=ALL\n")
+
+
+        # Workaround to submit to 'glean' queue and 'condo' queue (condo-group doesn't exist anymore)
+        # if (self.queue == "glean") or (self.queue == "condo"):
+        #     sh_file.write('%s -W group_list=condo-group\n' %
+        #                   self.queue_param_prefix)
+
+        self._write_additional_resources(sh_file)
+
+        if self.array:
+            sh_file.write(f"{self.queue_param_prefix} -o {self.out_filename}_\%A_\%a\n")
+            sh_file.write(f"{self.queue_param_prefix} -e {self.err_filename}_\%A_\%a\n")
+            if self.max_running is not None:
+                sh_file.write("%s --array=1-%d%%%d\n" % (
+                    self.queue_param_prefix, self.number_jobs,
+                    self.max_running))
+            else:
+                sh_file.write(
+                    "%s --array=1-%d\n" % (self.queue_param_prefix,
+                                      self.number_jobs))
+        else:
+            sh_file.write(f"{self.queue_param_prefix} -o {self.out_filename}\n")
+            sh_file.write(f"{self.queue_param_prefix} -e {self.err_filename}\n")
+        sh_file.write('\n# Go to the directory from which the script was '
+                      'called\n')
+        sh_file.write("cd $SLURM_SUBMIT_DIR\n")
+        # self.array_job_identifier = "$PBS_ARRAYID"
