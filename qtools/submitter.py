@@ -21,7 +21,7 @@ class Submitter(object):
     Class that will customize and submit shell scripts
     to the job scheduler
     """
-    def __init__(self, commands, job_name, queue_type='PBS', sh=None,
+    def __init__(self, commands, job_name, queue_type='SLURM', sh=None,
                  array=None, nodes=1, ppn=1,
                  walltime='0:30:00', queue='home', account='yeo-group',
                  out=None, err=None, max_running=None, submit=True,
@@ -260,22 +260,25 @@ class Submitter(object):
         
             if self.queue_type == 'SLURM':
                 self._write_slurm(sh_file)
+                for command in self.commands:
+                    sh_file.write(str(command) + "\n")
+                    
             elif self.queue_type == 'SGE':
                 self._write_sge(sh_file)
             elif self.queue_type == 'PBS':
                 self._write_pbs(sh_file)
 
                 
-            if self.array:
-                sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
-                    self.commands)))
-                for i, cmd in enumerate(self.commands):
-                    sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
-                sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
-            #    pass
-            else:
-                for command in self.commands:
-                    sh_file.write(str(command) + "\n")
+                if self.array:
+                    sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
+                        self.commands)))
+                    for i, cmd in enumerate(self.commands):
+                        sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
+                    sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
+                #    pass
+                else:
+                    for command in self.commands:
+                        sh_file.write(str(command) + "\n")
 
             sh_file.write('\n')
 
