@@ -197,7 +197,7 @@ class Submitter(object):
     @property
     def array_job_identifier(self):
         if self.queue_type == 'SLURM':
-            return "$SLURM_ARRAY_JOB_ID"
+            return "$SLURM_ARRAY_TASK_ID"
         if self.queue_type == 'PBS':
             return "$PBS_ARRAYID"
         elif self.queue_type == 'SGE':
@@ -254,31 +254,26 @@ class Submitter(object):
                           nodes=self.nodes, queue=self.queue,
                           queue_type=self.queue_type, submit=self.submit)
             return
-        
+
         # sys.stderr.write(self.sh_filename)
         with open(self.sh_filename, 'w') as sh_file:
-        
             if self.queue_type == 'SLURM':
                 self._write_slurm(sh_file)
-                for command in self.commands:
-                    sh_file.write(str(command) + "\n")
-                    
             elif self.queue_type == 'SGE':
                 self._write_sge(sh_file)
             elif self.queue_type == 'PBS':
                 self._write_pbs(sh_file)
 
-                
-                if self.array:
-                    sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
-                        self.commands)))
-                    for i, cmd in enumerate(self.commands):
-                        sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
-                    sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
-                #    pass
-                else:
-                    for command in self.commands:
-                        sh_file.write(str(command) + "\n")
+            if self.array:
+                sys.stderr.write("Writing %d tasks as an array-job.\n" % (len(
+                    self.commands)))
+                for i, cmd in enumerate(self.commands):
+                    sh_file.write("cmd[%d]=\"%s\"\n" % ((i + 1), cmd))
+                sh_file.write("eval ${cmd[%s]}\n" % (self.array_job_identifier))
+           #    pass
+            else:
+                for command in self.commands:
+                    sh_file.write(str(command) + "\n")
 
             sh_file.write('\n')
 
@@ -373,7 +368,6 @@ class Submitter(object):
         sh_file.write(f"{self.queue_param_prefix} -A {self.account}\n")
         sh_file.write(f"{self.queue_param_prefix} -q {self.queue}\n")
         sh_file.write(f"{self.queue_param_prefix} -t {self.walltime}\n")
-        
         sh_file.write(f"{self.queue_param_prefix} --export=ALL\n")
 
 
